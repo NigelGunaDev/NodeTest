@@ -23,6 +23,8 @@ public class Program
         _ = builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
         _ = builder.Services.AddScoped<INodeFileService, NodeFileService>();
+        _ = builder.Services.AddScoped<INodeFolderService, NodeFolderService>();
+        _ = builder.Services.AddScoped<INodeService, NodeService>();
 
         var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -33,8 +35,8 @@ public class Program
                                   policy =>
                                   {
                                       _ = policy.AllowAnyOrigin()
-                                                          .AllowAnyHeader()
-                                                          .AllowAnyMethod();
+                                                .AllowAnyHeader()
+                                                .AllowAnyMethod();
                                   });
         });
 
@@ -90,8 +92,66 @@ public class Program
             _ = await dbContext.SaveChangesAsync();
 
 
-            return Results.CreatedAtRoute("GetNodeFile", nodeFile.Entity);
+            return Results.Ok(nodeFile.Entity.Id);
         }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFile").WithOpenApi();
+
+
+
+
+
+
+        _ = app.MapGet("/folder/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var nodeFolder = await dbContext!.NodeFolder.FindAsync(Guid.Parse(id));
+            if (nodeFolder == null)
+            {
+                httpContext.Response.StatusCode = 404;
+                return;
+            }
+            await httpContext.Response.WriteAsJsonAsync(nodeFolder);
+        }).WithName("GetNodeFolder").WithOpenApi();
+
+
+        _ = app.MapPost("/folder", async (HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var nodeFolderService = httpContext.RequestServices.GetService<INodeFolderService>();
+            var nodeFile = dbContext!.NodeFolder.Add(nodeFolderService!.CreateNodeFolder());
+            _ = await dbContext.SaveChangesAsync();
+
+
+            return Results.Ok(nodeFile.Entity.Id);
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFolder").WithOpenApi();
+
+
+
+
+
+
+        _ = app.MapGet("/node/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var node = await dbContext!.Node.FindAsync(Guid.Parse(id));
+            if (node == null)
+            {
+                httpContext.Response.StatusCode = 404;
+                return;
+            }
+            await httpContext.Response.WriteAsJsonAsync(node);
+        }).WithName("GetNode").WithOpenApi();
+
+
+        _ = app.MapPost("/node", async (HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var nodeService = httpContext.RequestServices.GetService<INodeService>();
+            var nodeFile = dbContext!.Node.Add(nodeService!.CreateNode());
+            _ = await dbContext.SaveChangesAsync();
+
+
+            return Results.Ok(nodeFile.Entity.Id);
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNode").WithOpenApi();
 
 
         app.Run();
