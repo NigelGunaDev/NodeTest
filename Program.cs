@@ -66,13 +66,13 @@ public class Program
         _ = app.MapGet("/hello", (HttpResponse response, HttpContext httpContext) =>
         {
             return "Hello World";
-        }).WithName("Hello!").WithOpenApi();
+        }).WithName("Hello").WithOpenApi();
 
 
         _ = app.MapGet("/file/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
-            var nodeFile = await dbContext.NodeFile.FindAsync(Guid.Parse(id));
+            var nodeFile = await dbContext!.NodeFile.FindAsync(Guid.Parse(id));
             if (nodeFile == null)
             {
                 httpContext.Response.StatusCode = 404;
@@ -86,7 +86,7 @@ public class Program
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
             var nodeFileService = httpContext.RequestServices.GetService<INodeFileService>();
-            var nodeFile = dbContext!.NodeFile.Add(nodeFileService.CreateNodeFile());
+            var nodeFile = dbContext!.NodeFile.Add(nodeFileService!.CreateNodeFile());
             _ = await dbContext.SaveChangesAsync();
 
 
