@@ -2,6 +2,6 @@
 
 public class NodeFolder : Node
 {
-    public required string FolderName { get; set; }
+    public string? FolderName { get; set; }
 
 }

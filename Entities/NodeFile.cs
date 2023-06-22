@@ -2,5 +2,5 @@
 
 public class NodeFile : Node
 {
-    public required string FileName { get; set; }
+    public string? FileName { get; set; }
 }
