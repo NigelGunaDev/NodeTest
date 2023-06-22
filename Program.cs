@@ -1,6 +1,9 @@
-
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NodeTest.Entities;
+using NodeTest.Interfaces;
 using NodeTest.Persistence;
+using NodeTest.Services;
 
 namespace NodeTest;
 
@@ -11,23 +14,39 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        builder.Services.AddAuthorization();
+        _ = builder.Services.AddAuthorization();
 
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        _ = builder.Services.AddEndpointsApiExplorer();
+        _ = builder.Services.AddSwaggerGen();
 
-        builder.Services.AddDbContext<NodeContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("NodeDb")));
-        builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+        _ = builder.Services.AddDbContext<NodeContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("NodeDb")));
+        _ = builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+        _ = builder.Services.AddScoped<INodeFileService, NodeFileService>();
+
+        var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+
+        _ = builder.Services.AddCors(options =>
+        {
+            options.AddPolicy(MyAllowSpecificOrigins,
+                                  policy =>
+                                  {
+                                      _ = policy.AllowAnyOrigin()
+                                                          .AllowAnyHeader()
+                                                          .AllowAnyMethod();
+                                  });
+        });
 
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-            app.UseDeveloperExceptionPage();
-            app.UseMigrationsEndPoint();
+            _ = app.UseSwagger();
+            _ = app.UseSwaggerUI();
+            _ = app.UseDeveloperExceptionPage();
+            _ = app.UseMigrationsEndPoint();
         }
 
         using (var scope = app.Services.CreateScope())
@@ -35,22 +54,45 @@ public class Program
             var services = scope.ServiceProvider;
 
             var context = services.GetRequiredService<NodeContext>();
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
+            _ = context.Database.EnsureDeleted();
+            _ = context.Database.EnsureCreated();
             // DbInitializer.Initialize(context);
         }
 
-        app.UseHttpsRedirection();
+        _ = app.UseHttpsRedirection();
+        _ = app.UseCors(MyAllowSpecificOrigins);
+        _ = app.UseAuthorization();
 
-        app.UseAuthorization();
-
-        app.MapGet("/hello", (HttpContext httpContext) =>
+        _ = app.MapGet("/hello", (HttpResponse response, HttpContext httpContext) =>
         {
-
             return "Hello World";
-        })
-        .WithName("Hello!")
-        .WithOpenApi();
+        }).WithName("Hello!").WithOpenApi();
+
+
+        _ = app.MapGet("/file/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var nodeFile = await dbContext.NodeFile.FindAsync(Guid.Parse(id));
+            if (nodeFile == null)
+            {
+                httpContext.Response.StatusCode = 404;
+                return;
+            }
+            await httpContext.Response.WriteAsJsonAsync(nodeFile);
+        }).WithName("GetNodeFile").WithOpenApi();
+
+
+        _ = app.MapPost("/file", async (HttpResponse response, HttpContext httpContext) =>
+        {
+            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
+            var nodeFileService = httpContext.RequestServices.GetService<INodeFileService>();
+            var nodeFile = dbContext!.NodeFile.Add(nodeFileService.CreateNodeFile());
+            _ = await dbContext.SaveChangesAsync();
+
+
+            return Results.CreatedAtRoute("GetNodeFile", nodeFile.Entity);
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFile").WithOpenApi();
+
 
         app.Run();
     }
