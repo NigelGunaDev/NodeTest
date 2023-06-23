@@ -50,21 +50,30 @@ public class NodeService : INodeService
             var dbSetProperty = _context.GetType().GetProperty(entityType.Name);
             var dbSet = dbSetProperty.GetValue(_context) as IQueryable;
 
-            if (node.EntityType.Equals("NodeFile"))
-            {
+            var query = _context.Set<dynamic>()
+                        .FromSqlRaw($"SELECT * FROM {node.EntityType}");
 
-                var test = dbSet.Cast<NodeFile>(); // THIS IS WHERE I FALL SHORT
-                var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
-                node.RelatedProps = results;
-            }
+            var results = new List<dynamic>();
+            node.RelatedProps = results;
 
-            if (node.EntityType.Equals("NodeFolder"))
-            {
 
-                var test = dbSet.Cast<NodeFolder>(); // THIS IS WHERE I FALL SHORT
-                var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
-                node.RelatedProps = results;
-            }
+            // ====================================================================================
+            //if (node.EntityType.Equals("NodeFile"))
+            //{
+
+            //    var test = dbSet.Cast<NodeFile>(); // THIS IS WHERE I FALL SHORT
+            //    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
+            //    node.RelatedProps = results;
+            //}
+
+            //if (node.EntityType.Equals("NodeFolder"))
+            //{
+
+            //    var test = dbSet.Cast<NodeFolder>(); // THIS IS WHERE I FALL SHORT
+            //    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
+            //    node.RelatedProps = results;
+            //}
+            // ====================================================================================
 
 
             //test.Where("BaseNodeId == @0", node.Id)

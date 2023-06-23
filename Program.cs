@@ -62,7 +62,7 @@ public class Program
             var services = scope.ServiceProvider;
 
             var context = services.GetRequiredService<NodeContext>();
-            _ = context.Database.EnsureDeleted();
+            //_ = context.Database.EnsureDeleted();
             _ = context.Database.EnsureCreated();
             // DbInitializer.Initialize(context);
         }
