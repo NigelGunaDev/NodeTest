@@ -1,17 +1,22 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
 using NodeTest.Entities;
 using NodeTest.Interfaces;
 using NodeTest.Persistence;
+using System.Data.SqlClient;
+using System.Dynamic;
 
 namespace NodeTest.Services;
 
 public class NodeService : INodeService
 {
     private readonly NodeContext _context;
+    private readonly IConfiguration _configuration;
 
-    public NodeService(NodeContext context)
+    public NodeService(NodeContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     public async Task<Node?> CreateNodeAsync(string nodeType)
@@ -41,62 +46,86 @@ public class NodeService : INodeService
     public async Task<Node> FindAsync(Guid nodeId)
     {
         //var node = await _context.Node.FindAsync(nodeId);
-
         var node = await _context.Node.FirstOrDefaultAsync(e => e.Id == nodeId);
-        if (node != null)
+        var childid = node.ChildId ?? Guid.NewGuid();
+        var connectionString = _configuration.GetConnectionString("NodeDb");
+        using (var connection = new SqlConnection(connectionString))
         {
-            //var entityType = Type.GetType(node.EntityType);
-            var entityType = System.AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypes()).First(x => x.Name == node.EntityType);
-            var dbSetProperty = _context.GetType().GetProperty(entityType.Name);
-            var dbSet = dbSetProperty.GetValue(_context) as IQueryable;
+            var sql = @$"SELECT * FROM {node.EntityType} where Id = @childid";
+            var results = connection.Query(sql, new { childid });
 
-            var query = _context.Set<dynamic>()
-                        .FromSqlRaw($"SELECT * FROM {node.EntityType}");
+            if (results.Count() > 0)
+            {
 
-            var results = new List<dynamic>();
-            node.RelatedProps = results;
+                dynamic obj = new ExpandoObject();
+                var objDict = (IDictionary<string, object>)obj;
 
+                foreach (var row in results)
+                {
+                    var dict = (IDictionary<string, object>)row;
+                    foreach (var pair in dict)
+                    {
+                        objDict[pair.Key] = pair.Value;
+                    }
+                }
 
-            // ====================================================================================
-            //if (node.EntityType.Equals("NodeFile"))
-            //{
-
-            //    var test = dbSet.Cast<NodeFile>(); // THIS IS WHERE I FALL SHORT
-            //    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
-            //    node.RelatedProps = results;
-            //}
-
-            //if (node.EntityType.Equals("NodeFolder"))
-            //{
-
-            //    var test = dbSet.Cast<NodeFolder>(); // THIS IS WHERE I FALL SHORT
-            //    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
-            //    node.RelatedProps = results;
-            //}
-            // ====================================================================================
-
-
-            //test.Where("BaseNodeId == @0", node.Id)
-            //var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
-            //node.RelatedProps = results;
-            //.ToDynamicList();
-
-
-            //var entities = dbSet.
-            //.Where("BaseEntityId == @0", baseEntity.Id)
-            //.ToDynamicList();
-
-            //var dbSet2 = _context.Set(entityType);
-
-            //var objectContext = ((IObjectContextAdapter)_context).ObjectContext;
-            //var objectSet = objectContext.CreateObjectSet(entityType);
-            //var query = objectSet.Where("it.Id = @id", new ObjectParameter("id", 1));
-
-            //var objectContext = ((IObjectContextAdapter)_context).ObjectContext;
-            //var results = objectContext.ExecuteStoreQuery(entityType, "SELECT * FROM MyTable WHERE Id = {0}", 1);
-
-            //var results = _context.Database.SqlQuery(entityType, "SELECT * FROM MyTable WHERE Id = @p0", 1);
+                node.RelatedProps = obj;
+            }
         }
         return node;
     }
 }
+
+//if (node != null)
+//{
+//    //var entityType = Type.GetType(node.EntityType);
+//    var entityType = System.AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypes()).First(x => x.Name == node.EntityType);
+//    var dbSetProperty = _context.GetType().GetProperty(entityType.Name);
+//    var dbSet = dbSetProperty.GetValue(_context) as IQueryable;
+
+//var query = _context.Set<dynamic>()
+//            .FromSqlRaw($"SELECT * FROM {node.EntityType}");
+
+//var results = new List<dynamic>();
+//node.RelatedProps = results;
+
+
+// ====================================================================================
+//if (node.EntityType.Equals("NodeFile"))
+//{
+
+//    var test = dbSet.Cast<NodeFile>(); // THIS IS WHERE I FALL SHORT
+//    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
+//    node.RelatedProps = results;
+//}
+
+//if (node.EntityType.Equals("NodeFolder"))
+//{
+
+//    var test = dbSet.Cast<NodeFolder>(); // THIS IS WHERE I FALL SHORT
+//    var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
+//    node.RelatedProps = results;
+//}
+// ====================================================================================
+
+
+//test.Where("BaseNodeId == @0", node.Id)
+//var results = test.Where(x => x.BaseNodeId.Equals(nodeId)).ToList();
+//node.RelatedProps = results;
+//.ToDynamicList();
+
+
+//var entities = dbSet.
+//.Where("BaseEntityId == @0", baseEntity.Id)
+//.ToDynamicList();
+
+//var dbSet2 = _context.Set(entityType);
+
+//var objectContext = ((IObjectContextAdapter)_context).ObjectContext;
+//var objectSet = objectContext.CreateObjectSet(entityType);
+//var query = objectSet.Where("it.Id = @id", new ObjectParameter("id", 1));
+
+//var objectContext = ((IObjectContextAdapter)_context).ObjectContext;
+//var results = objectContext.ExecuteStoreQuery(entityType, "SELECT * FROM MyTable WHERE Id = {0}", 1);
+
+//var results = _context.Database.SqlQuery(entityType, "SELECT * FROM MyTable WHERE Id = @p0", 1);
