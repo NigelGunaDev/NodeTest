@@ -70,7 +70,21 @@ public class Program
             return "Hello World";
         }).WithName("Hello").WithOpenApi();
 
+        app.MapFileRoutes();
+        app.MapFolderRoutes();
+        app.MapNodeRoutes();
 
+
+        app.Run();
+    }
+
+
+}
+
+public static class FileApi
+{
+    public static void MapFileRoutes(this IEndpointRouteBuilder app)
+    {
         _ = app.MapGet("/file/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
@@ -81,7 +95,7 @@ public class Program
                 return;
             }
             await httpContext.Response.WriteAsJsonAsync(nodeFile);
-        }).WithName("GetNodeFile").WithOpenApi();
+        }).WithName("GetNodeFile").WithTags("File").WithOpenApi();
 
 
         _ = app.MapPost("/file", async (HttpResponse response, HttpContext httpContext) =>
@@ -93,13 +107,14 @@ public class Program
 
 
             return Results.Ok(nodeFile.Entity.Id);
-        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFile").WithOpenApi();
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFile").WithTags("File").WithOpenApi();
+    }
+}
 
-
-
-
-
-
+public static class FolderApi
+{
+    public static void MapFolderRoutes(this IEndpointRouteBuilder app)
+    {
         _ = app.MapGet("/folder/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
@@ -110,7 +125,7 @@ public class Program
                 return;
             }
             await httpContext.Response.WriteAsJsonAsync(nodeFolder);
-        }).WithName("GetNodeFolder").WithOpenApi();
+        }).WithName("GetNodeFolder").WithTags("Folder").WithOpenApi();
 
 
         _ = app.MapPost("/folder", async (HttpResponse response, HttpContext httpContext) =>
@@ -122,13 +137,14 @@ public class Program
 
 
             return Results.Ok(nodeFile.Entity.Id);
-        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFolder").WithOpenApi();
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFolder").WithTags("Folder").WithOpenApi();
+    }
+}
 
-
-
-
-
-
+public static class NodeApi
+{
+    public static void MapNodeRoutes(this IEndpointRouteBuilder app)
+    {
         _ = app.MapGet("/node/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
@@ -139,7 +155,7 @@ public class Program
                 return;
             }
             await httpContext.Response.WriteAsJsonAsync(node);
-        }).WithName("GetNode").WithOpenApi();
+        }).WithName("GetNode").WithTags("Node").WithOpenApi();
 
 
         _ = app.MapPost("/node", async (HttpResponse response, HttpContext httpContext) =>
@@ -151,9 +167,7 @@ public class Program
 
 
             return Results.Ok(nodeFile.Entity.Id);
-        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNode").WithOpenApi();
+        }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNode").WithTags("Node").WithOpenApi();
 
-
-        app.Run();
     }
 }
