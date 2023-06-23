@@ -4,5 +4,5 @@ namespace NodeTest.Interfaces;
 
 public interface INodeFolderService
 {
-    public NodeFolder CreateNodeFolder();
+    public Task<NodeFolder?> CreateNodeFolderAsync(Guid baseEntity);
 }

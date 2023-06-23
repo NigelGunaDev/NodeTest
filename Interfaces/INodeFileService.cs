@@ -4,6 +4,6 @@ namespace NodeTest.Interfaces;
 
 public interface INodeFileService
 {
-    public NodeFile CreateNodeFile();
+    public Task<NodeFile> CreateNodeFileAsync(Guid baseEntity);
 
 }

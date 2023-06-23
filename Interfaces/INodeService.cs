@@ -4,5 +4,6 @@ namespace NodeTest.Interfaces;
 
 public interface INodeService
 {
-    public Node CreateNode();
+    public Task<Node> CreateNodeAsync(string nodeType);
+    Task<Node> FindAsync(Guid nodeId);
 }

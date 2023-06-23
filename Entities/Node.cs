@@ -2,6 +2,8 @@
 
 public class Node : BaseEntity
 {
-    public Guid? Parent { get; set; }
-    public Guid? Child { get; set; }
+    public Guid? ParentId { get; set; }
+    public Guid? ChildId { get; set; }
+    public required string EntityType { get; set; }
+    public IEnumerable<object>? RelatedProps { get; set; }
 }

@@ -18,11 +18,23 @@ public class NodeContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         //base.OnModelCreating(modelBuilder);
-        _ = modelBuilder.Entity<Node>().HasDiscriminator<string>("EntityType");
-        _ = modelBuilder.Entity<NodeFolder>().Property(x => x.FolderName).HasMaxLength(1000);
-        _ = modelBuilder.Entity<NodeFile>().Property(x => x.FileName).HasMaxLength(1000);
+        //_ = modelBuilder.Entity<Node>().HasDiscriminator<string>("EntityType");
+        //_ = modelBuilder.Entity<NodeFolder>().Property(x => x.FolderName).HasMaxLength(1000);
+        //_ = modelBuilder.Entity<NodeFile>().Property(x => x.FileName).HasMaxLength(1000);
 
-        _ = modelBuilder.Entity<User>().HasMany(x => x.Node).WithMany();
+        //_ = modelBuilder.Entity<User>().HasMany(x => x.Node).WithMany();
 
+
+        _ = modelBuilder.Entity<NodeFile>()
+            .HasOne(e => e.BaseNode)
+            .WithOne()
+            .HasForeignKey<NodeFile>(e => e.BaseNodeId);
+
+        _ = modelBuilder.Entity<NodeFolder>()
+            .HasOne(e => e.BaseNode)
+            .WithOne()
+            .HasForeignKey<NodeFolder>(e => e.BaseNodeId);
+
+        _ = modelBuilder.Entity<Node>().Ignore(x => x.RelatedProps);
     }
 }

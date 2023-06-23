@@ -4,6 +4,8 @@ using NodeTest.Entities;
 using NodeTest.Interfaces;
 using NodeTest.Persistence;
 using NodeTest.Services;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NodeTest;
 
@@ -25,6 +27,10 @@ public class Program
         _ = builder.Services.AddScoped<INodeFileService, NodeFileService>();
         _ = builder.Services.AddScoped<INodeFolderService, NodeFolderService>();
         _ = builder.Services.AddScoped<INodeService, NodeService>();
+
+        //_ = builder.Services.Configure<JsonSerializerOptions>(options =>
+        //options.ReferenceHandler = ReferenceHandler.IgnoreCycles
+        //    );
 
         var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -85,6 +91,7 @@ public static class FileApi
 {
     public static void MapFileRoutes(this IEndpointRouteBuilder app)
     {
+        // GET
         _ = app.MapGet("/file/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
@@ -94,19 +101,16 @@ public static class FileApi
                 httpContext.Response.StatusCode = 404;
                 return;
             }
-            await httpContext.Response.WriteAsJsonAsync(nodeFile);
+            await httpContext.Response.WriteAsJsonAsync(nodeFile, options: new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles });
         }).WithName("GetNodeFile").WithTags("File").WithOpenApi();
 
-
-        _ = app.MapPost("/file", async (HttpResponse response, HttpContext httpContext) =>
+        // POST
+        _ = app.MapPost("/file/{baseNode}", async ([FromRoute] string baseNode, HttpResponse response, HttpContext httpContext) =>
         {
-            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
             var nodeFileService = httpContext.RequestServices.GetService<INodeFileService>();
-            var nodeFile = dbContext!.NodeFile.Add(nodeFileService!.CreateNodeFile());
-            _ = await dbContext.SaveChangesAsync();
+            var nodeFile = await nodeFileService!.CreateNodeFileAsync(Guid.Parse(baseNode));
 
-
-            return Results.Ok(nodeFile.Entity.Id);
+            return Results.Ok(nodeFile.Id);
         }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFile").WithTags("File").WithOpenApi();
     }
 }
@@ -115,6 +119,7 @@ public static class FolderApi
 {
     public static void MapFolderRoutes(this IEndpointRouteBuilder app)
     {
+        // GET
         _ = app.MapGet("/folder/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
             var dbContext = httpContext.RequestServices.GetService<NodeContext>();
@@ -124,19 +129,19 @@ public static class FolderApi
                 httpContext.Response.StatusCode = 404;
                 return;
             }
-            await httpContext.Response.WriteAsJsonAsync(nodeFolder);
+            await httpContext.Response.WriteAsJsonAsync(nodeFolder, options: new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles });
+
         }).WithName("GetNodeFolder").WithTags("Folder").WithOpenApi();
 
 
-        _ = app.MapPost("/folder", async (HttpResponse response, HttpContext httpContext) =>
+        // POST
+        _ = app.MapPost("/folder/{baseNode}", async ([FromRoute] string baseNode, HttpResponse response, HttpContext httpContext) =>
         {
-            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
             var nodeFolderService = httpContext.RequestServices.GetService<INodeFolderService>();
-            var nodeFile = dbContext!.NodeFolder.Add(nodeFolderService!.CreateNodeFolder());
-            _ = await dbContext.SaveChangesAsync();
+            var nodeFolder = await nodeFolderService!.CreateNodeFolderAsync(Guid.Parse(baseNode));
 
+            return Results.Ok(nodeFolder.Id);
 
-            return Results.Ok(nodeFile.Entity.Id);
         }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNodeFolder").WithTags("Folder").WithOpenApi();
     }
 }
@@ -145,28 +150,27 @@ public static class NodeApi
 {
     public static void MapNodeRoutes(this IEndpointRouteBuilder app)
     {
+        // GET
         _ = app.MapGet("/node/{id}", async ([FromRoute] string id, HttpResponse response, HttpContext httpContext) =>
         {
-            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
-            var node = await dbContext!.Node.FindAsync(Guid.Parse(id));
+            var nodeService = httpContext.RequestServices.GetService<INodeService>();
+            var node = await nodeService!.FindAsync(Guid.Parse(id));
             if (node == null)
             {
                 httpContext.Response.StatusCode = 404;
                 return;
             }
-            await httpContext.Response.WriteAsJsonAsync(node);
+            await httpContext.Response.WriteAsJsonAsync(node, options: new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles });
         }).WithName("GetNode").WithTags("Node").WithOpenApi();
 
 
-        _ = app.MapPost("/node", async (HttpResponse response, HttpContext httpContext) =>
+        // POST
+        _ = app.MapPost("/node/{nodeType}", async (HttpResponse response, HttpContext httpContext, [FromRoute] string nodeType) =>
         {
-            var dbContext = httpContext.RequestServices.GetService<NodeContext>();
             var nodeService = httpContext.RequestServices.GetService<INodeService>();
-            var nodeFile = dbContext!.Node.Add(nodeService!.CreateNode());
-            _ = await dbContext.SaveChangesAsync();
+            var nodeFile = await nodeService!.CreateNodeAsync(nodeType);
 
-
-            return Results.Ok(nodeFile.Entity.Id);
+            return Results.Ok(nodeFile.Id);
         }).Produces<string>(200).Produces<NodeFile>(201).WithName("AddNode").WithTags("Node").WithOpenApi();
 
     }
